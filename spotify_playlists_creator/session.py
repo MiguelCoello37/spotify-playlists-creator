@@ -97,5 +97,18 @@ class Session():
         response.raise_for_status()
         playlist = response.json()
 
-        # playlist_id = playlist["id"]
+        playlist_id = playlist["id"]
         print(f"Playlist creada: {playlist['external_urls']['spotify']}")
+
+        return playlist_id
+
+    def add_track_ids_to_playlist(self, track_ids: list, playlist_id: str):
+            body = {
+                "uris": [f"spotify:track:{track_id}" for track_id in track_ids]
+            }
+            url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
+
+            response = requests.post(url, headers=self.headers, json=body)
+            response.raise_for_status()
+
+            print(f"Songs added to playlist {playlist_id}")
