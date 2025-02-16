@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 import requests
 
 BASE_URL = "https://accounts.spotify.com"
-CALLBACK_URI = "http://localhost:8888/callback"
 
 
 class Session():
@@ -12,18 +11,21 @@ class Session():
         load_dotenv()
         self.client_id = os.environ.get("CLIENT_ID")
         self.client_secret = os.environ.get("CLIENT_SECRET")
-        self.callback_uri = CALLBACK_URI
+        self.callback_uri = os.environ.get("CALLBACK_URI")
 
         authorization_url = self._get_authorization_url()
         print(authorization_url)
         code = input("Introduce code: ")
         self.token = self._get_token(code)
+        self.headers = {"Authorization": f"Bearer {self.token}"}
 
     def _get_authorization_url(self):
         endpoint= "/authorize"
         url = BASE_URL + endpoint
 
         params = {
+            "scope": "playlist-modify-private",
+            "show_dialog": False,
             "client_id": self.client_id,
             "response_type": "code",
             "redirect_uri": self.callback_uri,
@@ -55,13 +57,45 @@ class Session():
     def search_song(self, song_title, artist):
         query = f"track:{song_title} artist:{artist}"
         url = f"https://api.spotify.com/v1/search?q={query}&type=track&limit=1"
-        headers = {"Authorization": f"Bearer {self.token}"}
         
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=self.headers)
         response.raise_for_status()
         
         data = response.json()
         if data["tracks"]["items"]:
             track = data["tracks"]["items"][0]
-            return track["id"], track["name"], track["artists"][0]["name"], track["external_urls"]["spotify"]
+            return track["id"]
+
         return None
+
+    def get_user_profile(self):
+        url = "https://api.spotify.com/v1/me"
+        response = requests.get(url, headers=self.headers)
+
+        return response.json()
+    
+    def get_user_id(self):
+        url = "https://api.spotify.com/v1/me"
+
+        response = requests.get(url, headers=self.headers)
+        response.raise_for_status()
+        user_profile = response.json()
+        user_id = user_profile["id"]
+
+        return user_id
+
+    def create_playlist(self, playlist_name: str, playlist_description: str=""):
+        user_id = self.get_user_id()
+        playlist_data = {
+            "name": playlist_name,
+            "description": playlist_description,
+            "public": False
+        }
+        url = f"https://api.spotify.com/v1/users/{user_id}/playlists"
+
+        response = requests.post(url, headers=self.headers, json=playlist_data)
+        response.raise_for_status()
+        playlist = response.json()
+
+        # playlist_id = playlist["id"]
+        print(f"Playlist creada: {playlist['external_urls']['spotify']}")
