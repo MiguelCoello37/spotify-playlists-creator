@@ -6,53 +6,16 @@ import requests
 BASE_URL = "https://accounts.spotify.com"
 
 
-class Session():
-    def __init__(self):
-        load_dotenv()
-        self.client_id = os.environ.get("CLIENT_ID")
-        self.client_secret = os.environ.get("CLIENT_SECRET")
-        self.callback_uri = os.environ.get("CALLBACK_URI")
+load_dotenv()
+CLIENT_ID = os.environ.get("CLIENT_ID")
+CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
+CALLBACK_URI = os.environ.get("CALLBACK_URI")
 
-        authorization_url = self._get_authorization_url()
-        print(authorization_url)
-        code = input("Introduce code: ")
-        self.token = self._get_token(code)
+
+class Session:
+    def __init__(self, token):
+        self.token = token
         self.headers = {"Authorization": f"Bearer {self.token}"}
-
-    def _get_authorization_url(self):
-        endpoint= "/authorize"
-        url = BASE_URL + endpoint
-
-        params = {
-            "scope": "playlist-modify-private",
-            "show_dialog": False,
-            "client_id": self.client_id,
-            "response_type": "code",
-            "redirect_uri": self.callback_uri,
-        }
-        
-        request = requests.request("get", url, params=params)
-
-        return request.url
-
-
-    def _get_token(self, code):
-        endpoint = "/api/token"
-        url = BASE_URL + endpoint
-
-        body = {
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": self.callback_uri,
-            "client_id": self.client_id,
-            "client_secret": self.client_secret
-        }
-
-        response = requests.post(url, data=body)
-
-        response.raise_for_status()
-
-        return response.json()["access_token"]
 
     def search_song(self, song_title, artist):
         query = f"track:{song_title} artist:{artist}"
@@ -100,7 +63,7 @@ class Session():
         playlist_id = playlist["id"]
         print(f"Playlist creada: {playlist['external_urls']['spotify']}")
 
-        return playlist_id
+        return playlist_id, playlist['external_urls']['spotify']
 
     def add_track_ids_to_playlist(self, track_ids: list, playlist_id: str):
             body = {
